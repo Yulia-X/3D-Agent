@@ -75,8 +75,8 @@ export function InfiniteCanvas() {
     }
   }, [selectCard, selectedCardId]);
 
-  // 使用 useGesture 处理拖拽和滚轮
-  const bind = useGesture({
+  // 使用 useGesture 处理拖拽和滚轮（target 模式绑定到 DOM，避免 passive listener 问题）
+  useGesture({
     onDrag: ({ delta: [dx, dy], event }) => {
       // 仅在拖拽空白区域时平移（不是拖拽卡片）
       if ((event.target as HTMLElement).closest('[data-card]')) return;
@@ -101,8 +101,9 @@ export function InfiniteCanvas() {
       setViewport({ x: newX, y: newY, scale: newScale });
     },
   }, {
+    target: containerRef,
     drag: { filterTaps: true },
-    wheel: { eventOptions: { passive: false } },
+    eventOptions: { passive: false },
   });
 
   const handleReset = () => setViewport({ x: 0, y: 0, scale: 1 });
@@ -110,7 +111,6 @@ export function InfiniteCanvas() {
   return (
     <div
       ref={containerRef}
-      {...bind()}
       className="w-full h-full relative overflow-hidden cursor-grab active:cursor-grabbing select-none"
       style={{ touchAction: 'none' }}
       onClick={(e) => {

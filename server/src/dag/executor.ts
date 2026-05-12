@@ -166,6 +166,12 @@ export class DAGExecutor {
     // 合并节点参数到输入
     const mergedInputs = { ...inputs, ...node.params }
 
+    console.log(`[DAGExecutor] executeNode ${node.id} (${node.agentType}/${node.action}):`, {
+      modelUrl: mergedInputs.modelUrl?.slice(0, 80),
+      inputTaskId: mergedInputs.inputTaskId,
+      prompt: mergedInputs.prompt?.slice(0, 40),
+    })
+
     // 构建约束
     const constraints: TaskConstraints = {
       maxCredits: node.estimatedCost * 2,

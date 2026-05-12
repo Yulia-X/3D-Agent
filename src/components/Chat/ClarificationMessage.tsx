@@ -107,6 +107,7 @@ const ActiveClarification: React.FC<{ clarification: ClarificationData; messageI
     // 安全守卫：timeout 无效或过小（< 5秒）时不启动倒计时
     if (timeout < 5000) {
       setRemaining(0);
+      timeoutFiredRef.current = true; // 不需要触发超时处理
       return;
     }
     timeoutFiredRef.current = false;
@@ -116,11 +117,6 @@ const ActiveClarification: React.FC<{ clarification: ClarificationData; messageI
       setRemaining((prev) => {
         if (prev <= 1000) {
           clearInterval(interval);
-          if (!timeoutFiredRef.current) {
-            timeoutFiredRef.current = true;
-            // 单题超时：自动选择推荐项
-            handleQuestionTimeout(currentIdx);
-          }
           return 0;
         }
         return prev - 1000;
@@ -130,6 +126,15 @@ const ActiveClarification: React.FC<{ clarification: ClarificationData; messageI
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIdx]);
+
+  // 单独的 effect 处理超时，避免在 setRemaining updater 中触发外部 store 更新
+  useEffect(() => {
+    if (remaining <= 0 && !timeoutFiredRef.current) {
+      timeoutFiredRef.current = true;
+      handleQuestionTimeout(currentIdx);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remaining]);
 
   // 单题超时处理
   const handleQuestionTimeout = useCallback(

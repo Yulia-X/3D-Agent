@@ -18,6 +18,12 @@ function getProxiedUrl(url: string): string {
   return url;
 }
 
+// URL 验证：仅允许远程 http/https URL
+function isValidModelUrl(url: string | undefined | null): boolean {
+  if (!url) return false;
+  return url.startsWith('http://') || url.startsWith('https://');
+}
+
 function ModelScene({ url, wireframe }: { url: string; wireframe: boolean }) {
   const proxiedUrl = getProxiedUrl(url);
   const { scene } = useGLTF(proxiedUrl);
@@ -101,32 +107,41 @@ export function ModelViewerModal() {
 
         {/* 3D 渲染区域 */}
         <div className={`relative z-10 flex-1 mx-6 mb-4 rounded-xl overflow-hidden ${bgStyles[bgColor]}`}>
-          <Canvas camera={{ position: [0, 1, 4], fov: 50 }}>
-            <ambientLight intensity={0.4} />
-            <directionalLight position={[5, 5, 5]} intensity={1.2} />
-            <directionalLight position={[-3, 3, -3]} intensity={0.4} />
-            <Suspense fallback={null}>
-              <ModelScene url={card.modelUrl} wireframe={wireframe} />
-              <Environment preset="city" />
-            </Suspense>
-            <OrbitControls
-              enablePan
-              enableZoom
-              enableRotate
-              minDistance={1}
-              maxDistance={20}
-              autoRotate={false}
-            />
-            <Grid
-              infiniteGrid
-              fadeDistance={30}
-              fadeStrength={3}
-              cellSize={0.5}
-              cellColor="#ffffff10"
-              sectionSize={2}
-              sectionColor="#ffffff20"
-            />
-          </Canvas>
+          {isValidModelUrl(card.modelUrl) ? (
+            <Canvas
+              camera={{ position: [0, 1, 4], fov: 50 }}
+              style={{ touchAction: 'none' }}
+            >
+              <ambientLight intensity={0.4} />
+              <directionalLight position={[5, 5, 5]} intensity={1.2} />
+              <directionalLight position={[-3, 3, -3]} intensity={0.4} />
+              <Suspense fallback={null}>
+                <ModelScene url={card.modelUrl} wireframe={wireframe} />
+                <Environment preset="city" />
+              </Suspense>
+              <OrbitControls
+                enablePan
+                enableZoom
+                enableRotate
+                minDistance={1}
+                maxDistance={20}
+                autoRotate={false}
+              />
+              <Grid
+                infiniteGrid
+                fadeDistance={30}
+                fadeStrength={3}
+                cellSize={0.5}
+                cellColor="#333333"
+                sectionSize={2}
+                sectionColor="#555555"
+              />
+            </Canvas>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-white/40 text-sm">
+              模型加载失败：无效的模型地址
+            </div>
+          )}
         </div>
 
         {/* 底部工具栏 */}

@@ -90,6 +90,7 @@ export class Orchestrator {
    * 处理edit命令
    */
   async handleEdit(sessionId: string, prompt: string, targetVersion: string, sourceModelUrl?: string, sourceTaskId?: string): Promise<void> {
+    console.log('[handleEdit] ENTRY:', { prompt, targetVersion, sourceModelUrl: sourceModelUrl?.slice(0, 50), sourceTaskId })
     const session = this.wsServer.getSession(sessionId)
     if (!session) return
 
@@ -332,53 +333,82 @@ export class Orchestrator {
     }
 
     // ========== Step 3: 澄清决策 ==========
+    // 明确的编辑指令（来自专用按钮）跳过澄清
+    const DIRECT_EDIT_COMMANDS = ['重新贴图', '重塑网格', '重塞网格', '重建网格', '重新材质']
+    const isDirectEdit = !isNew && DIRECT_EDIT_COMMANDS.some(cmd => prompt.trim() === cmd || prompt.startsWith(cmd + ' '))
+
     console.log('[CLARIFICATION] parseResult.confidence:', JSON.stringify(parseResult.confidence))
+    console.log('[CLARIFICATION] isDirectEdit:', isDirectEdit, 'prompt:', prompt)
 
-    const checkpoint = await this.clarificationEngine.checkPrePlanning(context, parseResult)
+    // 直接编辑指令：硬编码正确的 changeScope，避免意图解析偏差
+    if (isDirectEdit) {
+      const trimmed = prompt.trim()
+      let directScope: ChangeScope | null = null
+      if (['重新贴图', '重新材质'].some(cmd => trimmed === cmd || trimmed.startsWith(cmd + ' '))) {
+        directScope = { geometry: false, texture: true, skeleton: false, animation: false, print: false, metadata: false }
+      } else if (['重塑网格', '重塞网格', '重建网格'].some(cmd => trimmed === cmd || trimmed.startsWith(cmd + ' '))) {
+        directScope = { geometry: true, texture: false, skeleton: false, animation: false, print: false, metadata: false }
+      }
+      if (directScope) {
+        pipeline.updateContext({ changeScope: directScope })
+        console.log('[DIRECT_EDIT] Overriding changeScope for command:', trimmed, JSON.stringify(directScope))
+      }
+    }
 
-    console.log('[CLARIFICATION] checkResult:', JSON.stringify({
-      shouldTrigger: checkpoint.shouldTrigger,
-      questionCount: checkpoint.questions.length,
-      questionFields: checkpoint.questions.map(q => q.field),
-    }))
+    if (!isDirectEdit) {
+      const checkpoint = await this.clarificationEngine.checkPrePlanning(context, parseResult)
 
-    this.emit(sessionId, {
-      type: 'reasoning:step',
-      taskId,
-      step: '澄清决策',
-      detail: checkpoint.shouldTrigger ? `需要补充 ${checkpoint.questions.length} 个信息` : '信息充分，直接执行',
-    })
+      console.log('[CLARIFICATION] checkResult:', JSON.stringify({
+        shouldTrigger: checkpoint.shouldTrigger,
+        questionCount: checkpoint.questions.length,
+        questionFields: checkpoint.questions.map(q => q.field),
+      }))
 
-    if (checkpoint.shouldTrigger) {
-      pipeline.transition('clarification_needed')
-      this.emit(sessionId, {
-        type: 'clarification:needed',
-        payload: {
-          checkpoint,
-          questions: checkpoint.questions,
-        },
-      })
-
-      this.emit(sessionId, {
-        type: 'task:progress',
-        taskId,
-        step: '等待用户补充信息...',
-        progress: 15,
-        estimatedRemaining: 25000,
-      })
-
-      // ⚠️ 关键：必须在此阻塞等待用户回答，后续步骤（DAG构建+执行）不能提前运行
-      const response = await pipeline.pause()
-
-      // 检查是否被取消
-      if (response?.type === 'cancel') return
-
-      // 澄清完成后，发送reasoning step表明流程继续
       this.emit(sessionId, {
         type: 'reasoning:step',
         taskId,
-        step: '意图澄清完成',
-        detail: `用户已补充信息，继续执行流程`,
+        step: '澄清决策',
+        detail: checkpoint.shouldTrigger ? `需要补充 ${checkpoint.questions.length} 个信息` : '信息充分，直接执行',
+      })
+
+      if (checkpoint.shouldTrigger) {
+        pipeline.transition('clarification_needed')
+        this.emit(sessionId, {
+          type: 'clarification:needed',
+          payload: {
+            checkpoint,
+            questions: checkpoint.questions,
+          },
+        })
+
+        this.emit(sessionId, {
+          type: 'task:progress',
+          taskId,
+          step: '等待用户补充信息...',
+          progress: 15,
+          estimatedRemaining: 25000,
+        })
+
+        // ⚠️ 关键：必须在此阻塞等待用户回答，后续步骤（DAG构建+执行）不能提前运行
+        const response = await pipeline.pause()
+
+        // 检查是否被取消
+        if (response?.type === 'cancel') return
+
+        // 澄清完成后，发送reasoning step表明流程继续
+        this.emit(sessionId, {
+          type: 'reasoning:step',
+          taskId,
+          step: '意图澄清完成',
+          detail: `用户已补充信息，继续执行流程`,
+        })
+      }
+    } else {
+      this.emit(sessionId, {
+        type: 'reasoning:step',
+        taskId,
+        step: '澄清决策',
+        detail: '直接编辑指令，跳过澄清直接执行',
       })
     }
 
@@ -460,6 +490,17 @@ export class Orchestrator {
     if (context.currentVersion?.assets?.modelUrl) {
       inputs.modelUrl = context.currentVersion.assets.modelUrl
     }
+    // 如果有当前模型的 meshyTaskId（编辑场景需要 inputTaskId）
+    if (context.currentVersion?.assets?.meshyTaskId) {
+      inputs.inputTaskId = context.currentVersion.assets.meshyTaskId
+    }
+
+    console.log('[DAG_EXECUTE] Base inputs:', {
+      prompt: inputs.prompt?.slice(0, 30),
+      modelUrl: inputs.modelUrl?.slice(0, 60),
+      inputTaskId: inputs.inputTaskId,
+      art_style: inputs.art_style,
+    })
 
     const results = await executor.execute(dag, inputs, {
       onNodeProgress: (nodeId, progress, step) => {
@@ -521,6 +562,9 @@ export class Orchestrator {
     // ========== Step 7: 收集结果，创建版本 ==========
     // 从产出模型的节点获取输出
     const lastResult = this.getFinalModelResult(dag, results)
+    console.log('[orchestrator] getFinalModelResult:', lastResult ? { status: lastResult.status, modelUrl: lastResult.outputs?.modelUrl, outputs: Object.keys(lastResult.outputs || {}) } : 'NULL')
+    console.log('[orchestrator] DAG nodes:', dag.nodes.map(n => ({ id: n.id, agentType: n.agentType })))
+    console.log('[orchestrator] Results:', [...results.entries()].map(([k, v]) => ({ id: k, status: v.status, hasModelUrl: !!v.outputs?.modelUrl })))
     const modelUrl = lastResult?.outputs?.modelUrl || ''
     const textureUrls = lastResult?.outputs?.textureUrls || []
     const thumbnailUrl = lastResult?.outputs?.thumbnailUrl || ''

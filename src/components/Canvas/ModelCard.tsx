@@ -39,11 +39,18 @@ interface CanvasErrorBoundaryState {
   hasError: boolean;
 }
 
-class CanvasErrorBoundary extends Component<CanvasErrorBoundaryProps, CanvasErrorBoundaryState> {
+class CanvasErrorBoundary extends Component<CanvasErrorBoundaryProps & { resetKey?: string }, CanvasErrorBoundaryState> {
   state: CanvasErrorBoundaryState = { hasError: false };
 
   static getDerivedStateFromError(_: Error): CanvasErrorBoundaryState {
     return { hasError: true };
+  }
+
+  componentDidUpdate(prevProps: CanvasErrorBoundaryProps & { resetKey?: string }) {
+    // resetKey 变化时自动重置 error boundary
+    if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) {
+      this.setState({ hasError: false });
+    }
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
@@ -202,11 +209,16 @@ export const ModelCard = React.memo(function ModelCard({ card }: ModelCardProps)
         </div>
       )}
       {/* 3D 预览区域 */}
-      <div className="w-full h-[180px] relative bg-space-900/50">
+      <div className="w-full h-[180px] relative bg-space-900/50" style={{ touchAction: 'none' }}>
         {card.status === 'SUCCEEDED' && isValidModelUrl(card.modelUrl) ? (
           isVisible ? (
-            <CanvasErrorBoundary>
-              <Canvas camera={{ position: [0, 0, 3], fov: 45 }}>
+            <CanvasErrorBoundary resetKey={card.modelUrl}>
+              <Canvas
+                key={card.modelUrl}
+                camera={{ position: [0, 0, 3], fov: 45 }}
+                style={{ touchAction: 'none' }}
+                gl={{ antialias: true }}
+              >
                 <ambientLight intensity={0.5} />
                 <directionalLight position={[5, 5, 5]} intensity={1} />
                 <Suspense fallback={null}>
