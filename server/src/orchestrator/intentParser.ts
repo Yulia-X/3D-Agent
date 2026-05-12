@@ -162,7 +162,7 @@ export class IntentParser {
     }
 
     // 形状/尺寸 → geometry
-    if (/形状|尺寸|大小|比例|变形|拉伸|缩放|mesh|shape|size|geometry/i.test(input)) {
+    if (/形状|尺寸|大小|比例|变形|拉伸|缩放|网格|重建网格|减面|拓扑|布线|面数|多边形|mesh|remesh|shape|size|geometry|topology|polygon/i.test(input)) {
       scope.geometry = true
     }
 

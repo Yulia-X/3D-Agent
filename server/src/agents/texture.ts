@@ -36,11 +36,19 @@ export class TextureAgent extends BaseAgent {
         onProgress?.(20 + progress * 0.7, status)
       })
 
+      // 从 model_urls 中提取 GLB URL（兼容大小写及多种格式）
+      const modelUrls = result.model_urls || {}
+      const modelUrl = modelUrls.glb || modelUrls.GLB || modelUrls.obj || modelUrls.fbx || ''
+
+      if (!modelUrl) {
+        console.warn(`[TextureAgent] retexture task ${taskId} succeeded but model_urls is empty or missing glb:`, JSON.stringify(result.model_urls))
+      }
+
       onProgress?.(100, '材质完成')
       return this.successResult(
         {
-          modelUrl: result.model_urls?.glb || '',
-          formats: result.model_urls || {},
+          modelUrl,
+          formats: modelUrls,
           textureUrls: result.texture_urls,
           thumbnailUrl: result.thumbnail_url || '',
         },

@@ -228,13 +228,17 @@ export class MeshyClient {
         task_error: null,
       };
     }
+    // 模拟真实 Meshy CDN URL（必须为 https:// 协议，前端 isValidModelUrl 验证要求）
     return {
       id: taskId, status: 'SUCCEEDED', progress: 100,
       created_at: createdAt, started_at: createdAt + 3000, finished_at: now,
       task_error: null,
-      model_urls: { glb: `/models/mock-${taskId}.glb`, fbx: `/models/mock-${taskId}.fbx` },
-      texture_urls: [{ base_color: `/textures/mock-${taskId}-diffuse.png` }],
-      thumbnail_url: `/thumbnails/mock-${taskId}.png`,
+      model_urls: {
+        glb: `https://assets.meshy.ai/mock/${taskId}/output.glb`,
+        fbx: `https://assets.meshy.ai/mock/${taskId}/output.fbx`,
+      },
+      texture_urls: [{ base_color: `https://assets.meshy.ai/mock/${taskId}/texture_diffuse.png` }],
+      thumbnail_url: `https://assets.meshy.ai/mock/${taskId}/thumbnail.png`,
     };
   }
 }
