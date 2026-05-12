@@ -1,0 +1,156 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0a0a1a;
+    color: #e2e8f0;
+    overflow-x: hidden;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(79, 195, 247, 0.3);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(79, 195, 247, 0.5);
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .glass-panel-sm {
+    @apply bg-white/5 backdrop-blur-lg border border-white/10 rounded-xl;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  }
+
+  .neon-border {
+    position: relative;
+  }
+
+  .neon-border::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(79, 195, 247, 0.5), rgba(179, 136, 255, 0.5), rgba(105, 240, 174, 0.3));
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    -webkit-mask-composite: xor;
+    pointer-events: none;
+  }
+
+  .glow-text {
+    text-shadow: 0 0 10px rgba(79, 195, 247, 0.5), 0 0 30px rgba(79, 195, 247, 0.2);
+  }
+
+  .node-connector {
+    position: relative;
+  }
+
+  .node-connector::after {
+    content: '';
+    position: absolute;
+    right: -20px;
+    top: 50%;
+    width: 20px;
+    height: 2px;
+    background: linear-gradient(to right, rgba(79, 195, 247, 0.8), rgba(79, 195, 247, 0.2));
+  }
+
+  .gradient-mesh {
+    background: 
+      radial-gradient(ellipse at 20% 50%, rgba(79, 195, 247, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(179, 136, 255, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 80%, rgba(105, 240, 174, 0.05) 0%, transparent 50%);
+  }
+
+  .input-glow {
+    transition: box-shadow 0.3s ease;
+  }
+
+  .input-glow:focus {
+    box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.3), 0 0 20px rgba(79, 195, 247, 0.1);
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-neon-blue via-neon-purple to-neon-pink;
+  }
+
+  .text-gradient-green {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-neon-green to-neon-cyan;
+  }
+}
+
+/* 澄清卡片脉冲边框动画 */
+@keyframes borderPulse {
+  0%, 100% { box-shadow: 0 0 0 1.5px rgba(99, 102, 241, 0.4), 0 0 20px rgba(139, 92, 246, 0.15); }
+  50% { box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.7), 0 0 30px rgba(99, 102, 241, 0.25); }
+}
+
+.animate-border-pulse {
+  animation: borderPulse 2.5s ease-in-out infinite;
+}
+
+/* 微妙呼吸动画 */
+@keyframes subtlePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+
+.animate-pulse-subtle {
+  animation: subtlePulse 3s ease-in-out infinite;
+}
+
+/* 范围滑块自定义样式 */
+.range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #6366f1;
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.range-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.6);
+}
+
+.range-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #6366f1;
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
+  cursor: pointer;
+}
