@@ -142,30 +142,6 @@ npm run dev:server   # 后端（Fastify + WebSocket）
 
 ---
 
-## 界面预览
-
-### 初始状态
-
-![初始状态](step1_initial_state.png)
-
-### 输入提示词
-
-![输入提示词](step2_input_text.png)
-
-### 生成完成
-
-![生成完成](step3_generation_complete.png)
-
-### 编辑模式
-
-![编辑模式](step4_edit_mode.png)
-
-### 视图模式
-
-![视图模式](step5_viewmode_attempt.png)
-
----
-
 ## 开发
 
 ### 前端构建
